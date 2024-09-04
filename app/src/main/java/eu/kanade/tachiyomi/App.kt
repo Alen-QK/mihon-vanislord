@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.os.Build
 import android.os.Looper
 import android.webkit.WebView
@@ -25,6 +26,8 @@ import eu.kanade.domain.DomainModule
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.setAppCompatDelegateThemeMode
+import eu.kanade.presentation.more.settings.screen.browse.RepoDialog
+import eu.kanade.presentation.more.settings.screen.browse.RepoEvent
 import eu.kanade.tachiyomi.crash.CrashActivity
 import eu.kanade.tachiyomi.crash.GlobalExceptionHandler
 import eu.kanade.tachiyomi.data.coil.BufferedSourceFetcher
@@ -43,14 +46,19 @@ import eu.kanade.tachiyomi.util.system.WebViewUtil
 import eu.kanade.tachiyomi.util.system.animatorDurationScale
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.notify
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import logcat.AndroidLogcatLogger
 import logcat.LogPriority
 import logcat.LogcatLogger
 import mihon.core.migration.Migrator
 import mihon.core.migration.migrations.migrations
+import mihon.domain.extensionrepo.interactor.CreateExtensionRepo
 import org.conscrypt.Conscrypt
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.Preference
@@ -69,6 +77,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     private val networkPreferences: NetworkPreferences by injectLazy()
 
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
+    // 用于在初次启动时将kavita插件的信息加入数据库
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val _events: Channel<RepoEvent> = Channel(Int.MAX_VALUE)
 
     @SuppressLint("LaunchActivityFromNotification")
     override fun onCreate() {
@@ -94,6 +105,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         setupNotificationChannels()
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+        applicationScope.launch {
+            executeOnFirstInstall()
+        }
 
         // Show notification to disable Incognito Mode when it's enabled
         basePreferences.incognitoMode().changes()
@@ -136,6 +150,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         }
 
         initializeMigrator()
+
     }
 
     private fun initializeMigrator() {
@@ -241,6 +256,44 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             }
         }
     }
+
+    // 新增的用于在初次启动时添加kavita插件信息的code
+
+    private suspend fun executeOnFirstInstall() {
+        // 获取SharedPreferences
+        val sharedPreferences: SharedPreferences = getSharedPreferences("app_preferences", Context.MODE_PRIVATE)
+
+        // 检查是否已经执行过
+        val hasRunBefore = sharedPreferences.getBoolean("hasRunBefore", false)
+
+        if (!hasRunBefore) {
+            // 如果没有执行过，执行你的方法
+            runFirstInstallMethod()
+
+            // 标记为已执行过
+            with(sharedPreferences.edit()) {
+                putBoolean("hasRunBefore", true)
+                apply()
+            }
+        }
+    }
+
+    private suspend fun runFirstInstallMethod() {
+        // 这里放置你希望在第一次安装时执行的代码
+        val createExtensionRepo: CreateExtensionRepo = Injekt.get()
+        val baseUrl = "https://raw.githubusercontent.com/Kareadita/tachiyomi-extensions/repo/index.min.json"
+
+        when (val result = createExtensionRepo.await(baseUrl)) {
+            CreateExtensionRepo.Result.InvalidUrl -> _events.send(RepoEvent.InvalidUrl)
+            CreateExtensionRepo.Result.RepoAlreadyExists -> _events.send(RepoEvent.RepoAlreadyExists)
+//            is CreateExtensionRepo.Result.DuplicateFingerprint -> {
+//                showDialog(RepoDialog.Conflict(result.oldRepo, result.newRepo))
+//            }
+            else -> {}
+        }
+    }
+
+
 }
 
 private const val ACTION_DISABLE_INCOGNITO_MODE = "tachi.action.DISABLE_INCOGNITO_MODE"

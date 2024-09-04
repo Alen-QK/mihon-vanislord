@@ -1,5 +1,6 @@
 package mihon.domain.extensionrepo.interactor
 
+import android.util.Log
 import logcat.LogPriority
 import mihon.domain.extensionrepo.exception.SaveExtensionRepoException
 import mihon.domain.extensionrepo.model.ExtensionRepo
@@ -19,6 +20,8 @@ class CreateExtensionRepo(
         }
 
         val baseUrl = repoUrl.removeSuffix("/index.min.json")
+
+        // baseUrl=https://raw.githubusercontent.com/Kareadita/tachiyomi-extensions/repo, name=Kavita Extension Repo, shortName=Kavita, website=https://www.kavitareader.com/, signingKeyFingerprint=5887aee6597996821a1f05ec0d88cac45ec2847143278ac6b1efc657bfad6be0
         return service.fetchRepoDetails(baseUrl)?.let { insert(it) } ?: Result.InvalidUrl
     }
 

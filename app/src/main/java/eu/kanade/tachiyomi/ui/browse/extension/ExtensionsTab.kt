@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.ui.browse.extension
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.tooling.preview.Preview
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.browse.ExtensionScreen
@@ -34,9 +35,10 @@ fun extensionsTab(
             ),
             AppBar.OverflowAction(
                 title = stringResource(MR.strings.label_extension_repos),
-                onClick = { navigator.push(ExtensionReposScreen()) },
+                onClick = { navigator.push(ExtensionReposScreen()) }, // 前往repo的界面，右上角的burger
             ),
         ),
+        // extension主界面的内容
         content = { contentPadding, _ ->
             ExtensionScreen(
                 state = state,
