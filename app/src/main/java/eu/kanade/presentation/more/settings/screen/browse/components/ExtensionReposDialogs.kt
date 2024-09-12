@@ -1,8 +1,11 @@
 package eu.kanade.presentation.more.settings.screen.browse.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -16,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.coroutines.delay
 import mihon.domain.extensionrepo.model.ExtensionRepo
@@ -180,6 +184,68 @@ fun ExtensionRepoConfirmDialog(
         dismissButton = {
             TextButton(onClick = onDismissRequest) {
                 Text(text = stringResource(MR.strings.action_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+fun KavitaUserInfoDialog(
+    onDismissRequest: () -> Unit,
+    onComfirm: (String, String) -> Unit,
+) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(text = "Kavita OPDS")},
+        text = {
+            Column {
+                Text(text = "请输入Kavita服务器的用户名和密码")
+
+                OutlinedTextField(
+                    modifier = Modifier
+                        .focusRequester(focusRequester),
+                    value = username,
+                    onValueChange = { username = it },
+                    label = {
+                        Text(text = "Kavita 用户名")
+                    },
+                    supportingText = {
+                        val msgRes = MR.strings.information_required_plain
+                        Text(text = stringResource(msgRes))
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    modifier = Modifier
+                        .focusRequester(focusRequester),
+                    value = password,
+                    onValueChange = { password = it },
+                    label = {
+                        Text(text = "Kavita 密码")
+                    },
+                    supportingText = {
+                        val msgRes = MR.strings.information_required_plain
+                        Text(text = stringResource(msgRes))
+                    },
+                    singleLine = true,
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = username.isNotEmpty() && password.isNotEmpty(),
+                onClick = { onComfirm(username, password) }) {
+                Text(text = "提交")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismissRequest) {
+                Text(text = "取消")
             }
         },
     )

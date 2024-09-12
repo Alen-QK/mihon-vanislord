@@ -1,7 +1,16 @@
 package eu.kanade.tachiyomi.ui.browse.extension
 
 import android.app.Application
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import dev.icerock.moko.resources.StringResource
@@ -9,6 +18,8 @@ import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.extension.interactor.GetExtensionsByType
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.components.SEARCH_DEBOUNCE_MILLIS
+import eu.kanade.presentation.more.settings.screen.browse.RepoDialog
+import eu.kanade.presentation.more.settings.screen.browse.RepoScreenState
 import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.extension.model.Extension
 import eu.kanade.tachiyomi.extension.model.InstallStep
@@ -28,20 +39,28 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import mihon.domain.extensionrepo.interactor.GetKavitaUserOpds
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import kotlin.time.Duration.Companion.seconds
 
+
 class ExtensionsScreenModel(
     preferences: SourcePreferences = Injekt.get(),
     basePreferences: BasePreferences = Injekt.get(),
     private val extensionManager: ExtensionManager = Injekt.get(),
     private val getExtensions: GetExtensionsByType = Injekt.get(),
+    private val getKavitaUserOpds: GetKavitaUserOpds = Injekt.get(),
+//    private val context: Context
 ) : StateScreenModel<ExtensionsScreenModel.State>(State()) {
 
     private val currentDownloads = MutableStateFlow<Map<String, InstallStep>>(hashMapOf())
+    private val _successMessage = MutableLiveData<String>()
+    val successMessage: LiveData<String> = _successMessage
+    var clipboardStatus by mutableStateOf<String?>(null)
+        private set
 
     init {
         val context = Injekt.get<Application>()
@@ -167,6 +186,25 @@ class ExtensionsScreenModel(
         }
     }
 
+    fun fetchKavitaOpdsData(username: String, password: String) {
+        screenModelScope.launchIO {
+            val opds = getKavitaUserOpds.await(username, password)
+            val context = Injekt.get<Application>()
+
+            if (opds == "Error") {
+                clipboardStatus = "获取数据失败，可能是用户名密码错误，请重试"
+            }
+            else {
+                copyToClipboard(context, opds)
+                clipboardStatus = "OPDS已经复制到剪贴板"
+            }
+        }
+    }
+
+    fun clearClipboardStatus() {
+        clipboardStatus = null
+    }
+
     fun cancelInstallUpdateExtension(extension: Extension) {
         extensionManager.cancelInstallUpdateExtension(extension)
     }
@@ -184,6 +222,12 @@ class ExtensionsScreenModel(
             .onEach { installStep -> addDownloadState(extension, installStep) }
             .onCompletion { removeDownloadState(extension) }
             .collect()
+
+    private fun copyToClipboard(context: Context, text: String, label: String = "Copied Text") {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText(label, text)
+        clipboard.setPrimaryClip(clip)
+    }
 
     fun uninstallExtension(extension: Extension) {
         extensionManager.uninstallExtension(extension)
@@ -207,6 +251,10 @@ class ExtensionsScreenModel(
             extensionManager.trust(extension)
         }
     }
+
+
+
+
 
     @Immutable
     data class State(

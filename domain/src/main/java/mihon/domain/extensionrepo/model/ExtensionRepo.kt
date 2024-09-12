@@ -7,3 +7,7 @@ data class ExtensionRepo(
     val website: String,
     val signingKeyFingerprint: String,
 )
+
+data class KavitaOpds(
+    val Opds: String?,
+)

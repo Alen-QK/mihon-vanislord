@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.browse.extension.details
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.Immutable
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope

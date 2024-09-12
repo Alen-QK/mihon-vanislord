@@ -29,6 +29,7 @@ import mihon.domain.extensionrepo.interactor.CreateExtensionRepo
 import mihon.domain.extensionrepo.interactor.DeleteExtensionRepo
 import mihon.domain.extensionrepo.interactor.GetExtensionRepo
 import mihon.domain.extensionrepo.interactor.GetExtensionRepoCount
+import mihon.domain.extensionrepo.interactor.GetKavitaUserOpds
 import mihon.domain.extensionrepo.interactor.ReplaceExtensionRepo
 import mihon.domain.extensionrepo.interactor.UpdateExtensionRepo
 import mihon.domain.extensionrepo.repository.ExtensionRepoRepository
@@ -184,12 +185,13 @@ class DomainModule : InjektModule {
         addFactory { TrustExtension(get(), get()) }
 
         addSingletonFactory<ExtensionRepoRepository> { ExtensionRepoRepositoryImpl(get()) }
-        addFactory { ExtensionRepoService(get(), get()) }
+        addFactory { ExtensionRepoService(get(), get(), get()) }
         addFactory { GetExtensionRepo(get()) }
         addFactory { GetExtensionRepoCount(get()) }
         addFactory { CreateExtensionRepo(get(), get()) }
         addFactory { DeleteExtensionRepo(get()) }
         addFactory { ReplaceExtensionRepo(get()) }
         addFactory { UpdateExtensionRepo(get(), get()) }
+        addFactory { GetKavitaUserOpds(get())}
     }
 }
